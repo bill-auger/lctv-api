@@ -1,33 +1,37 @@
 <?php
 /**
  * Livecoding.tv API.
- * 
- * @package LCTVBadges\LCTVAPI
+ *
+ * @package LctvApi\LctvApi
  * @since 0.0.3
+ * @version 0.0.8
  */
 
-/** Check if script is accessed directly. */
-if ( basename( __FILE__ ) == basename( $_SERVER['SCRIPT_FILENAME'] ) ) {
-  exit();
+
+/* LctvApi Constants. */
+require_once( 'LctvApiConstants.inc' );
+/* LCTV API Helpers. */
+require_once( 'LctvApiHelpers.inc' );
+/* LCTV API Credentials. */
+if ( file_exists( __DIR__ . '/' . CREDENTIALS_FILE ) ) {
+	require( __DIR__ . '/' . CREDENTIALS_FILE );
+} else {
+	die( NOT_AUTHORIZED_MSG );
 }
 
-/** Set cache expire time if not set. */
-if ( ! defined( 'LCTVAPI_CACHE_EXPIRES_IN' ) ) {
-	define( 'LCTVAPI_CACHE_EXPIRES_IN', 300 );
-}
 
 /**
  * Livecoding.tv API class.
  *
  * @since 0.0.3
  */
-class LCTVAPI {
+class LctvApi {
 
 	/**
 	 * App client id.
-	 * 
+	 *
 	 * Used for authorization and token retrieval.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var string
@@ -36,9 +40,9 @@ class LCTVAPI {
 
 	/**
 	 * App client secret.
-	 * 
+	 *
 	 * Used for authorization and token retrieval.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var string
@@ -47,9 +51,9 @@ class LCTVAPI {
 
 	/**
 	 * Redirect url after livecoding.tv authorization.
-	 * 
+	 *
 	 * Used for authorization code return from API.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var string URL.
@@ -58,9 +62,9 @@ class LCTVAPI {
 
 	/**
 	 * Token.
-	 * 
+	 *
 	 * Used to make API calls.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var stdClass|boolean
@@ -69,20 +73,20 @@ class LCTVAPI {
 
 	/**
 	 * Scope.
-	 * 
+	 *
 	 * Used to define authorization scope.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var string
 	 */
-	public $scope = 'read read:user read:channel';
+	public $scope = '';
 
 	/**
 	 * User name/slug.
-	 * 
+	 *
 	 * Used to identify the user token for API calls.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access public
 	 * @var string
@@ -91,54 +95,65 @@ class LCTVAPI {
 
 	/**
 	 * Data store.
-	 * 
+	 *
 	 * Used to store, recall and delete data.
-	 * 
+	 *
 	 * @since 0.0.3
 	 * @access private
 	 * @var string|data store object
 	 */
-	private $data_store = 'LCTVAPIDataStoreFlatFiles';
+	private $data_store = '';
 
 	/**
 	 * Constructor.
 	 *
-	 * Supplied $args override class property defaults.
 	 * Handle auth requests and token checks on instantiation.
 	 *
 	 * @since 0.0.3
 	 *
-	 * @param array $args Arguments to override class property defaults.
+	 * @param string   $user - LCTV user to authenticate with (default: LCTV_MASTER_USER).
+	 *
+	 * @throws Exception - If curl not accessible.
+	 * @throws Exception - If missing credentials (via LctvApiHelpers::ValidateConstants()).
+	 * @throws Exception - If missing credentials (via LctvApiDataStoreFlatFiles->__construct()).
+	 * @throws Exception - If MySQL unsupported (via LctvApiDataStoreMySQL->__construct()).
 	 */
-	function __construct( $args = array() ) {
+	function __construct( $auth_user = '' ) {
 
-		/** Check that curl is available. */
+		/** Throw execption if curl is unavailable. */
 		if ( ! function_exists( 'curl_version' ) ) {
-			echo 'Curl required.';
-			exit();
+			throw new Exception(CURL_NOT_FOUND_MSG, 1);
 		}
 
-		/** Override class property defaults. */
-		$keys = array_keys( get_object_vars( $this ) );
-		foreach ( $keys as $key ) {
-			if ( isset( $args[$key] ) ) {
-				$this->$key = $args[$key];
-			}
-		}
+		/** Throw execption if constants pertaining to this class are undefined . */
+		LctvApiHelpers::ValidateConstants(array(
+			'LCTV_CLIENT_ID',
+			'LCTV_CLIENT_SECRET',
+			'LCTV_REDIRECT_URL',
+			'LCTV_MASTER_USER',
+			'LCTVAPI_STORAGE_CLASS',
+		) );
+
+		$this->auth_user     = ( empty( $auth_user ) ) ? LCTV_MASTER_USER : $auth_user;
+		$this->client_id     = LCTV_CLIENT_ID;
+		$this->client_secret = LCTV_CLIENT_SECRET;
+		$this->redirect_url  = LCTV_REDIRECT_URL;
+		$this->data_store    = LCTVAPI_STORAGE_CLASS;
+		$this->scope         = READ_SCOPE . ' ' . READUSER_SCOPE . ' ' . READCHANNEL_SCOPE ;
 
 		/** Instatiate data store. */
 		$this->data_store = new $this->data_store();
 
 		/** Delete user token and all user data. */
-		if ( isset( $_GET['delete'] ) && isset( $_GET['user'] ) ) {
-			$token_del = $this->data_store->get_data( $_GET['user'], 'token' );
+		if ( isset( $_GET['delete'] ) && ! empty( $this->auth_user ) ) {
+			$token_del = $this->data_store->get_data( $this->auth_user, 'token' );
 			if ( $_GET['delete'] === $token_del->delete_id ) {
-				$this->data_store->delete_data( $_GET['user'], '*' );
+				$this->data_store->delete_data( $this->auth_user, '*' );
 			}
 		}
 
 		/** Attempt to get token data. */
-		$this->token = $this->data_store->get_data( $this->user, 'token' );
+		$this->token = $this->data_store->get_data( $this->auth_user, 'token' );
 
 		/** If the API isn't authorized start a PHP session. */
 		if ( ! $this->is_authorized() ) {
@@ -153,10 +168,11 @@ class LCTVAPI {
 			}
 		}
 
-		/** Check the token. */
-		$this->check_token();
+		/** Refresh the token if necessary. */
+		$this->refresh_token();
 
 	}
+
 
 	/**
 	 * Check the token and get/refresh it if necessary.
@@ -164,19 +180,19 @@ class LCTVAPI {
 	 * @since 0.0.3
 	 * @access public
 	 */
-	public function check_token() {
+	public function refresh_token() {
 
-		/** No token to check or errored token. */
+		/** Check if token exists or errored token. */
 		if ( $this->token === false || isset( $this->token->error ) ) {
 			return;
 		}
 
-		/** Token hasn't expired yet. */
+		/** Check if token has expired yet. */
 		if ( isset( $this->token->access_token ) && ( time() - $this->token->created_at ) < $this->token->expires_in ) {
 			return;
 		}
 
-		/** POST parameters for token request. */
+		/** POST parameters for token refresh request. */
 		$token_params = array(
 			'grant_type'   => 'authorization_code',
 			'code'         => $this->token->code,
@@ -197,7 +213,7 @@ class LCTVAPI {
 		);
 
 		/** POST token request to API. */
-		$token_ret = $this->post_url_contents( 'https://www.livecoding.tv/o/token/', $token_params, $token_headers );
+		$token_ret = $this->post_url_contents( LCTV_TOKEN_URL, $token_params, $token_headers );
 		$token = json_decode( $token_ret );
 
 		/** Stop checking on error. */
@@ -210,12 +226,12 @@ class LCTVAPI {
 		$token->created_at = time();
 		$this->token = $token;
 		$this->token->delete_id = uniqid();
-		$user = $this->api_request( 'v1/user/' );
-		if ( ! isset( $user->result->detail ) ) {
-			if ( empty( $this->user ) ) {
-				$this->user = $user->result->slug;
+		$user_data = $this->api_request( 'v1/user/' );
+		if ( ! isset( $user_data->result->detail ) ) { // no error
+			if ( empty( $this->auth_user ) ) {
+				$this->auth_user = $user_data->result->slug;
 			}
-			$this->data_store->put_data( $user->result->slug, 'token', $this->token );
+			$this->data_store->put_data( $user_data->result->slug, 'token', $this->token );
 		}
 
 	}
@@ -235,7 +251,7 @@ class LCTVAPI {
 			}
 		}
 
-		return 'https://www.livecoding.tv/o/authorize/' .'
+		return LCTV_AUTH_URL .'
 			?scope=' . urlencode( $this->scope ) .
 			'&state=' . urlencode( session_id() ) .
 			'&redirect_uri=' . urlencode( $this->redirect_url ) .
@@ -261,7 +277,7 @@ class LCTVAPI {
 	 *
 	 * @since 0.0.3
 	 * @access public
-	 * 
+	 *
 	 * @param string $api_path         API endpoint. ex: 'v1/livestreams/'
 	 * @param int    $cache_expires_in (optional) Override LCTVAPI_CACHE_EXPIRES_IN constant. Default: false
 	 * @param bool   $cache            (optional) True to cache result, false to not. Default: true
@@ -271,7 +287,7 @@ class LCTVAPI {
 		/** Check if we're authorized. */
 		if ( ! $this->is_authorized() ) {
 			$ret = new stdClass();
-			$ret->result->detail = 'LCTVAPI not authorized';
+			$ret->result->detail = 'LctvApi not authorized';
 			return $ret;
 		}
 
@@ -279,7 +295,7 @@ class LCTVAPI {
 		$api_request_type = preg_replace( "/[^a-zA-Z0-9]+/", "", $api_path );
 
 		/** Attempt to load API request from cache. */
-		$api_cache = $this->data_store->get_data( $this->user, $api_request_type );
+		$api_cache = $this->data_store->get_data( $this->auth_user, $api_request_type );
 
 		/** Check for cache expire time override. */
 		if ( $cache_expires_in !== false ) {
@@ -289,7 +305,7 @@ class LCTVAPI {
 		}
 
 		/** Make API request call if we have no cache or if cache is expired. */
-		if ( ! isset( $api_cache->created_at ) || ( time() - $api_cache->created_at ) > $cache_check ) {
+		if ( ! isset( $api_cache->created_at ) || ( time() - $api_cache->created_at ) > $cache_check) {
 
 			$headers = array(
 				'Cache-Control: no-cache',
@@ -297,13 +313,13 @@ class LCTVAPI {
 				'Authorization: ' . $this->token->token_type . ' ' . $this->token->access_token,
 			);
 
-			$api_ret = $this->get_url_contents( 'https://www.livecoding.tv:443/api/' . $api_path, $headers );
+			$api_ret = $this->get_url_contents( LCTV_API_URL . $api_path, $headers );
 
 			$api_cache = new stdClass();
 			$api_cache->result = json_decode( $api_ret, false );
 			$api_cache->created_at = time();
 			if ( $cache ) {
-				$this->data_store->put_data( $this->user, $api_request_type, $api_cache );
+				$this->data_store->put_data( $this->auth_user, $api_request_type, $api_cache );
 			}
 
 		}
@@ -369,67 +385,89 @@ class LCTVAPI {
  *
  * @since 0.0.3
  */
-class LCTVAPIDataStoreFlatFiles {
+class LctvApiDataStoreFlatFiles {
 
 	/**
 	 * Constructor.
-	 * 
+	 *
 	 * @since 0.0.6
+	 *
+	 * @throws Exception - If missing credentials (via LctvApiHelpers::ValidateConstants()).
 	 */
-	 public function __construct() {
+	public function __construct() {
 
-		/** Set path for flat file data store if not set. */
-		if ( ! defined( 'LCTVAPI_DATA_PATH' ) ) {
-			define( 'LCTVAPI_DATA_PATH', __DIR__ );
-		}
+		/** Throw execption if constants pertaining to this class are undefined . */
+		LctvApiHelpers::ValidateConstants( array( 'LCTVAPI_STORAGE_PATH', ) ) ;
 
-	 }
+	}
+
+	/**
+	 * Create storage directory if it does not already exist.
+	 *
+	 * @since 0.0.8
+	 * @access private
+	 *
+	 */
+	private function createStorageDirectory()
+	{
+		if ( file_exists( LCTVAPI_STORAGE_PATH ) ) return ;
+
+		$dirs = explode( '/', LCTVAPI_STORAGE_PATH );
+		$path = '';
+		foreach( $dirs as $dir )
+			if ( !is_dir( $path .= "/$dir" ) )
+			  mkdir( $path, 0700 );
+	}
 
 	/**
 	 * Get data.
-	 * 
+	 *
 	 * Data is always an object, and should be returned as an object.
 	 *
 	 * @since 0.0.3
 	 * @access public
-	 * 
+	 *
 	 * @param string $user User name/slug.
 	 * @param string $type Data type.
-	 * 
+	 *
 	 * @return bool|stdClass False on failure, object on success.
 	 */
 	public function get_data( $user, $type ) {
 
-		if ( empty( $user ) || empty( $type ) || ! file_exists( LCTVAPI_DATA_PATH . $user . '.' . $type ) ) {
+		self::createStorageDirectory();
+
+		if ( empty( $user ) || empty( $type ) || ! file_exists( LCTVAPI_STORAGE_PATH . $user . '.' . $type ) ) {
 			return false;
 		}
 
-		return json_decode( file_get_contents( LCTVAPI_DATA_PATH . $user . '.' . $type ), false );
+		return json_decode( file_get_contents( LCTVAPI_STORAGE_PATH . $user . '.' . $type ), false );
 
 	}
 
 	/**
 	 * Put/store data.
-	 * 
+	 *
 	 * Data is always an object. False should be returned on failure,
 	 * any other value will be considered a success.
 	 *
 	 * @since 0.0.3
 	 * @access public
-	 * 
+	 *
 	 * @param string   $user User name/slug.
 	 * @param string   $type Data type.
 	 * @param stdClass $data Data object.
-	 * 
+	 *
 	 * @return bool|int False on failure, number of bytes written on success.
 	 */
 	public function put_data( $user, $type, $data ) {
+
+		self::createStorageDirectory();
 
 		if ( empty( $user ) || empty( $type ) || empty( $data ) ) {
 			return false;
 		}
 
-		return file_put_contents( LCTVAPI_DATA_PATH . $user . '.' . $type, json_encode( $data ) );
+		return file_put_contents( LCTVAPI_STORAGE_PATH . $user . '.' . $type, json_encode( $data ) );
 
 	}
 
@@ -440,23 +478,25 @@ class LCTVAPIDataStoreFlatFiles {
 	 *
 	 * @since 0.0.3
 	 * @access public
-	 * 
+	 *
 	 * @param string   $user User name/slug.
 	 * @param string   $type Data type.
-	 * 
+	 *
 	 * @return bool False on failure, true on success.
 	 */
 	public function delete_data( $user, $type ) {
+
+		self::createStorageDirectory();
 
 		if ( empty( $user ) || empty( $type ) ) {
 			return false;
 		}
 
 		if ( strpos( $type, '*' ) !== false ) {
-			array_map( 'unlink', glob( LCTVAPI_DATA_PATH . $user . '.' . $type ) );
+			array_map( 'unlink', glob( LCTVAPI_STORAGE_PATH . $user . '.' . $type ) );
 			return true;
 		} else {
-			return unlink( LCTVAPI_DATA_PATH . $user . '.' . $type );
+			return unlink( LCTVAPI_STORAGE_PATH . $user . '.' . $type );
 		}
 
 	}
@@ -465,14 +505,14 @@ class LCTVAPIDataStoreFlatFiles {
 
 /**
  * MySQL Data Store Class.
- * 
+ *
  * @since 0.0.6
  */
-class LCTVAPIDataStoreMySQL {
+class LctvApiDataStoreMySQL {
 
 	/**
 	 * Database object.
-	 * 
+	 *
 	 * @since 0.0.6
 	 * @access private
 	 * @var bool|database object
@@ -481,18 +521,27 @@ class LCTVAPIDataStoreMySQL {
 
 	/**
 	 * Constructor.
-	 * 
+	 *
 	 * Handle database connection.
-	 * 
+	 *
 	 * @since 0.0.6
+	 *
+	 * @throws Exception - If MySQL unsupported.
 	 */
 	 public function __construct() {
 
-		/** Bail if no mysqli support or LCTVAPI_DB constants are not set. */
-		if ( ! function_exists( 'mysqli_connect' ) || ! defined( 'LCTVAPI_DB_NAME' ) || ! defined( 'LCTVAPI_DB_USER' ) ||
-			! defined( 'LCTVAPI_DB_HOST' ) || ! defined( 'LCTVAPI_DB_PASSWORD' ) ) {
-			return;
+		/** Bail if no mysqli support. */
+		if ( ! function_exists( 'mysqli_connect' ) ) {
+			throw new Exception(MYSQL_UNSUPPORTED_MSG, 1);
 		}
+
+		/** Throw execption if constants pertaining to this class are undefined . */
+		LctvApiHelpers::ValidateConstants(array(
+			'LCTVAPI_DB_HOST',
+			'LCTVAPI_DB_USER',
+			'LCTVAPI_DB_PASSWORD',
+			'LCTVAPI_DB_NAME',
+		) );
 
 		/** Connect to database. */
 		$this->db = new mysqli( LCTVAPI_DB_HOST, LCTVAPI_DB_USER, LCTVAPI_DB_PASSWORD, LCTVAPI_DB_NAME );
@@ -508,15 +557,15 @@ class LCTVAPIDataStoreMySQL {
 
 	/**
 	 * Get data.
-	 * 
+	 *
 	 * Data is always an object, and should be returned as an object.
 	 *
 	 * @since 0.0.6
 	 * @access public
-	 * 
+	 *
 	 * @param string $user User name/slug.
 	 * @param string $type Data type.
-	 * 
+	 *
 	 * @return bool|stdClass False on failure, object on success.
 	 */
 	public function get_data( $user, $type ) {
@@ -540,17 +589,17 @@ class LCTVAPIDataStoreMySQL {
 
 	/**
 	 * Put/store data.
-	 * 
+	 *
 	 * Data is always an object. False should be returned on failure,
 	 * any other value will be considered a success.
 	 *
 	 * @since 0.0.6
 	 * @access public
-	 * 
+	 *
 	 * @param string   $user User name/slug.
 	 * @param string   $type Data type.
 	 * @param stdClass $data Data object.
-	 * 
+	 *
 	 * @return bool|int False on failure, id of entry stored on success.
 	 */
 	public function put_data( $user, $type, $data ) {
@@ -585,10 +634,10 @@ class LCTVAPIDataStoreMySQL {
 	 *
 	 * @since 0.0.6
 	 * @access public
-	 * 
+	 *
 	 * @param string   $user User name/slug.
 	 * @param string   $type Data type.
-	 * 
+	 *
 	 * @return bool False on failure, true on success.
 	 */
 	public function delete_data( $user, $type ) {
