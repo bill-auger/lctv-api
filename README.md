@@ -1,16 +1,18 @@
 LCTV Badges
 -----------
 
-License: GPLv3
-Requires: PHP v5.4+
+License: GPLv3  
+Requires: PHP v5.4+  
 Version: 0.0.8
+
 
 #### SETUP
 
-Setup constants are in LctvApiCredentials.inc.
-This file must exist in order to use this class.
-You can create this file using LctvApiCredentials.inc.example as a reference
-and then initialize the API by browsing to authorize.php.
+Setup constants are in LctvApiCredentials.inc.  
+This file must exist in order to use this class.  
+You can create this file using LctvApiCredentials.inc.example as a reference  
+Then initialize by browsing to authorize.php and authorizing with the LCTV API.  
+Depending on your use case, you may want to hide authorize.php after setup.  
 See example.php for usage.
 
 

@@ -30,6 +30,7 @@ if ( ! file_exists( CREDENTIALS_INCLUDE ) ) {
  * Livecoding.tv API class.
  *
  * @since 0.0.3
+ * @class LctvApi
  */
 class LctvApi {
 
@@ -390,6 +391,7 @@ class LctvApi {
  * Flat file data store class.
  *
  * @since 0.0.3
+ * @class LctvApiDataStoreFlatFiles
  */
 class LctvApiDataStoreFlatFiles {
 
@@ -513,6 +515,7 @@ class LctvApiDataStoreFlatFiles {
  * MySQL Data Store Class.
  *
  * @since 0.0.6
+ * @class LctvApiDataStoreMySQL
  */
 class LctvApiDataStoreMySQL {
 
