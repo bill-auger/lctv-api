@@ -1,7 +1,8 @@
 <?php
 
-define( 'CREDENTIALS_FILE' , 'LctvApiCredentials.inc' ) ;
-define( 'AUTHORIZE_FILE'   , 'authorize.php'          ) ;
+define( 'CREDENTIALS_FILE'    , 'LctvApiCredentials.inc' ) ;
+define( 'AUTHORIZE_FILE'      , 'authorize.php'          ) ;
+define( 'CREDENTIALS_INCLUDE' , dirname( __FILE__ ) . '/' . CREDENTIALS_FILE ) ;
 
 define( 'NOT_AUTHORIZED_MSG'     , 'This app is not yet authorized with the livecoding.tv API and no ' . CREDENTIALS_FILE . ' was found.  This file must exist in order to use this class.  You can create this file using ' . CREDENTIALS_FILE . '.example as a reference and then initialize the API by browsing to ' . AUTHORIZE_FILE . '.' ) ;
 define( 'CURL_NOT_FOUND_MSG'     , 'This library requires that curl be available on this server.' ) ;

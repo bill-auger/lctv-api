@@ -7,14 +7,13 @@
  * @version 0.0.8
  */
 
-
 /* LctvApi Constants. */
 require_once( 'LctvApiConstants.inc' );
 /* LCTV API Helpers. */
 require_once( 'LctvApiHelpers.inc' );
 /* LCTV API Credentials. */
-if ( file_exists( __DIR__ . '/' . CREDENTIALS_FILE ) ) {
-	require( __DIR__ . '/' . CREDENTIALS_FILE );
+if ( file_exists( CREDENTIALS_INCLUDE ) ) {
+	require_once( CREDENTIALS_INCLUDE );
 } else {
 	die( NOT_AUTHORIZED_MSG );
 }
@@ -24,6 +23,7 @@ if ( file_exists( __DIR__ . '/' . CREDENTIALS_FILE ) ) {
  * Livecoding.tv API class.
  *
  * @since 0.0.3
+ * @class LctvApi
  */
 class LctvApi {
 
@@ -384,6 +384,7 @@ class LctvApi {
  * Flat file data store class.
  *
  * @since 0.0.3
+ * @class LctvApiDataStoreFlatFiles
  */
 class LctvApiDataStoreFlatFiles {
 
@@ -507,6 +508,7 @@ class LctvApiDataStoreFlatFiles {
  * MySQL Data Store Class.
  *
  * @since 0.0.6
+ * @class LctvApiDataStoreMySQL
  */
 class LctvApiDataStoreMySQL {
 
