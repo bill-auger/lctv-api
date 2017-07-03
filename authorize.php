@@ -1,8 +1,9 @@
 <?php
 /**
- * Authorize Livecoding.tv accounts.
+ * LiveEdu.tv API authorization.
  *
  * @package LctvApi\Authorize
+ * @version 0.0.9
  * @since 0.0.3
  */
 
@@ -94,9 +95,10 @@ if ( TRACE ) { ?>
 <?php
 $is_set= isset($lctv_api->token) ;
 $is_empty = empty($lctv_api->token) ;
+$is_authorized = $is_set && isset($lctv_api->token->access_token);
 $token_dump = var_export($lctv_api->token , true) ;
-$token = ( ($is_set) ? (($is_empty) ? "empty" : $token_dump): "unset") ;
-$access_token = ((isset( $lctv_api->token) && isset( $lctv_api->token->access_token ) ) ? $lctv_api->token->access_token : "unset") ;
+$token = (($is_set) ? (($is_empty) ? "empty" : $token_dump): "unset") ;
+$access_token = (($is_authorized) ? $lctv_api->token->access_token : "unset") ;
 ?>
 <pre>tokens
 * <?php echo "token=$token"; ?>\n
@@ -110,7 +112,7 @@ $access_token = ((isset( $lctv_api->token) && isset( $lctv_api->token->access_to
 		<div style="padding:20px;width:600px;margin:0 auto;">
 		<?php if ( ! $lctv_api->is_authorized() ) : ?>
 			<h1 style="font-size:24px;font-weight:400;">Authorize</h1>
-			<p>LCTV Badges use the Livecoding.tv API to get their relevant stats.
+			<p>LCTV Badges use the LiveEdu.tv API to get their relevant stats.
 					Badges that display data from public API endpoints require only the site admin to authorize this site.
 					Badges that display data from private API endpoints require each target user to authorize this site.
 					Vistors to the site will not need to authorize.
@@ -121,15 +123,15 @@ $access_token = ((isset( $lctv_api->token) && isset( $lctv_api->token->access_to
 			<?php if ( isset( $_GET['user'] ) && isset( $_GET['delete'] ) ) : ?>
 				<p>The account &ldquo;<?php echo htmlspecialchars( $_GET['user'] ); ?>&rdquo; has been disconnected.</p>
 			<?php else : ?>
-				<p>This site saves an authorization token to access your Livecoding.tv account. You may delete this token so as to stop this site from further accessing your account information.</p>
-				<p>To disconnect your account, first connect your account with the link above, even if you have previously done so. After authorization a disconnect link will appear.</p>
+				<p>This site saves an authorization token to read certain status information from your LiveEdu.tv account. This site can not modify your LiveEdu.tv account in any way. You may delete this token at any time so as to stop this site from further accessing your account information.</p>
+				<p>To disconnect your account, first connect your account with the link above, even if you have previously done so. After authorization a link will appear for this purpose.</p>
 			<?php endif; ?>
 		<?php else : ?>
 			<h1 style="font-size:24px;font-weight:400;">Authorize</h1>
 			<p>The account &ldquo;<?php echo htmlspecialchars( $lctv_api->auth_user ); ?>&rdquo; is now connected.</p>
 			<br><br>
 			<h1 style="font-size:24px;font-weight:400;">Remove Authorization</h1>
-			<p>This site saves an authorization token to access your Livecoding.tv account. You may delete this token so as to stop this site from further accessing your account information with the link below.</p>
+			<p>This site saves an authorization token to read certain status information from your LiveEdu.tv account. This site can not modify your LiveEdu.tv account in any way. You may delete this token so as to stop this site from further accessing your account information with the link below.</p>
 			<p><a href="<?php echo $lctv_api->redirect_url; ?>?user=<?php echo urlencode( $lctv_api->auth_user ); ?>&delete=<?php echo urlencode( $lctv_api->token->delete_id ); ?>">Disconnect your account</a></p>
 		<?php endif; ?>
 			<br><br>
