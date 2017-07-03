@@ -3,7 +3,7 @@ LCTV Api Wrapper
 
 License: GPLv3  
 Requires: PHP v5.4+  
-Version: 0.0.8
+Version: 0.0.9
 
 
 #### SETUP

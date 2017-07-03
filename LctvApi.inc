@@ -1,10 +1,10 @@
 <?php
 /**
- * Livecoding.tv API.
+ * LiveEdu.tv API.
  *
  * @package LctvApi\LctvApi
  * @since 0.0.3
- * @version 0.0.8
+ * @version 0.0.9
  */
 
 /* LctvApi Constants. */
@@ -20,7 +20,7 @@ if ( file_exists( CREDENTIALS_INCLUDE ) ) {
 
 
 /**
- * Livecoding.tv API class.
+ * LiveEdu.tv API class.
  *
  * @since 0.0.3
  * @class LctvApi
@@ -50,7 +50,7 @@ class LctvApi {
 	public $client_secret = '';
 
 	/**
-	 * Redirect url after livecoding.tv authorization.
+	 * Redirect url after liveedu.tv authorization.
 	 *
 	 * Used for authorization code return from API.
 	 *

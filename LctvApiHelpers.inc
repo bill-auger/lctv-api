@@ -1,4 +1,12 @@
 <?php
+/**
+ * LiveEdu.tv API helper methods.
+ *
+ * @package LctvApi\Credentials
+ * @since 0.0.3
+ * @version 0.0.9
+ */
+
 
 class LctvApiHelpers {
 
